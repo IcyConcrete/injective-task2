@@ -1,0 +1,18 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.19"
+evm_version = "paris"
+optimizer = true
+optimizer_runs = 200
+
+[rpc_endpoints]
+injective_testnet = "${INJECTIVE_TESTNET_RPC_URL}"
+injective_mainnet = "${INJECTIVE_MAINNET_RPC_URL}"
+
+[etherscan]
+injective_testnet = { key = "${ETHERSCAN_API_KEY}", url = "https://testnet.explorer.injective.network/api" }
+injective_mainnet = { key = "${ETHERSCAN_API_KEY}", url = "https://explorer.injective.network/api" }
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
