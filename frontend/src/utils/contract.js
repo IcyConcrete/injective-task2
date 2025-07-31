@@ -3,6 +3,13 @@ import { ethers } from 'ethers';
 // 合约地址 - 已部署到Injective测试网
 export const CONTRACT_ADDRESS = '0x7504970cf3Ae75F67323Fb5a81660EB3665dCF47';
 
+// 备用RPC节点
+const BACKUP_RPC_URLS = [
+  'https://testnet.injective.network',
+  'https://testnet.rpc.injective.network',
+  'https://k8s.testnet.json-rpc.injective.network'
+];
+
 // 合约ABI
 export const CONTRACT_ABI = [
   // 读取计数器值
@@ -73,6 +80,22 @@ export const CONTRACT_ABI = [
   }
 ];
 
+// 创建备用提供者
+const createBackupProvider = async () => {
+  for (const rpcUrl of BACKUP_RPC_URLS) {
+    try {
+      const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+      // 测试连接
+      await provider.getNetwork();
+      console.log(`使用备用RPC: ${rpcUrl}`);
+      return provider;
+    } catch (error) {
+      console.warn(`RPC ${rpcUrl} 连接失败:`, error);
+    }
+  }
+  return null;
+};
+
 // 创建合约实例
 export const getContractInstance = (provider) => {
   // 严格检查provider是否存在
@@ -90,6 +113,20 @@ export const getContractInstance = (provider) => {
   }
 };
 
+// 使用备用RPC尝试读取合约
+const tryWithBackupProvider = async (contractMethod) => {
+  const backupProvider = await createBackupProvider();
+  if (!backupProvider) return null;
+  
+  try {
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, backupProvider);
+    return await contractMethod(contract);
+  } catch (error) {
+    console.error('备用RPC调用失败:', error);
+    return null;
+  }
+};
+
 // 读取计数器值
 export const getCounterValue = async (contract) => {
   // 严格检查contract是否存在
@@ -100,7 +137,30 @@ export const getCounterValue = async (contract) => {
     return value.toNumber();
   } catch (error) {
     console.error('读取计数器值失败:', error);
+    
+    // 尝试使用备用RPC
+    console.log('尝试使用备用RPC读取计数器值...');
+    const backupValue = await tryWithBackupProvider(async (c) => await c.getValue());
+    if (backupValue !== null) {
+      return backupValue.toNumber();
+    }
+    
     return 0;
+  }
+};
+
+// 获取合约拥有者
+export const getContractOwner = async (contract) => {
+  if (!contract) return null;
+  
+  try {
+    return await contract.owner();
+  } catch (error) {
+    console.error('获取合约拥有者失败:', error);
+    
+    // 尝试使用备用RPC
+    console.log('尝试使用备用RPC获取合约拥有者...');
+    return await tryWithBackupProvider(async (c) => await c.owner());
   }
 };
 
